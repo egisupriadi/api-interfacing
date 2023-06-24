@@ -18,8 +18,9 @@ module.exports = (callback) => {
         });
 
         res.on("end", () => {
+            console.log("INII DATA", data)
             const feeds = JSON.parse(data);
-            callback(feeds.map(({ name, last_value }) => ({ name, last_value: parseFloat(last_value || "0") })));
+            callback(feeds?.map(({ name, last_value }) => ({ name, last_value: parseFloat(last_value || "0") })) || []);
         });
     });
 
