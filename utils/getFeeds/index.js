@@ -18,7 +18,6 @@ module.exports = (callback) => {
         });
 
         res.on("end", () => {
-            console.log("INII DATA", adafruitUsername, adafruitKey)
             let feeds = [];
             if (res.statusCode == 200) {
                 feeds = JSON.parse(data)
