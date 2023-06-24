@@ -1,4 +1,4 @@
-const adafruitKey = "aio_oNYH03k7sW7EIRfuG1D5A6PWvy1J";
+const adafruitKey = "aio_cQuH649Q6KEVbA6UsxAPg7DVa39r";
 const adafruitUsername = "egisupriadi";
 
 module.exports = {

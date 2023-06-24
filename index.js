@@ -29,14 +29,13 @@ let mqttClient, existFeeds = [], listeners = {};
 
 
 const sendDataToFirebase = (feeds, data) => {
-    console.log("DEBUG", feeds, data, typeof data);
     db.ref(feeds).set(data);
     console.log("Data dikirim ke Firebase", feeds, data);
 };
 
 const unsubscribeFeeds = (feeds) => {
     if (!mqttClient) return
-    existFeeds = existFeeds.filter(item => !feeds.includes(item))
+    existFeeds = existFeeds.filter(({ name }) => !feeds.includes(name))
     feeds.forEach(feed => {
         mqttClient.unsubscribe(feed, (err) => {
             if (err) {
@@ -70,7 +69,7 @@ const unsubscribeFeeds = (feeds) => {
 
 const subscribeFeeds = (feeds = []) => {
     if (!mqttClient) return
-    existFeeds = [...existFeeds, ...feeds.map(({ name }) => name)]
+    existFeeds = [...existFeeds, ...feeds.map(({ name, last_value }) => ({ name, last_value }))]
     feeds.forEach(({ name: feed, last_value }) => {
         mqttClient.subscribe(`${adafruitUsername}/feeds/${feed}`, (err) => {
             if (err) {
@@ -81,13 +80,25 @@ const subscribeFeeds = (feeds = []) => {
         });
         listeners[feed] = db.ref(feed).on("value", (snapshot) => {
             const data = snapshot.val();
-            console.log("INI DATA FIREBASE", data)
             if (data != null) {
-                // Publish data ke Adafruit IO
-                mqttClient.publish(
-                    `${adafruitUsername}/feeds/${feed}`,
-                    JSON.stringify(data)
-                );
+                if (data != existFeeds.find(({ name }) => name == feed)?.last_value) {
+                    // Publish data ke Adafruit IO
+                    let idx = existFeeds.findIndex(({ name }) => name == feed)
+                    if (idx < 0) {
+                        existFeeds = [...existFeeds, { name: feed, last_value: data }]
+                    } else {
+                        existFeeds[idx] = {
+                            name: feed,
+                            last_value: data
+                        }
+                    }
+                    console.log("KIRIM DATA KE ADAFRUIT", data)
+                    mqttClient.publish(
+                        `${adafruitUsername}/feeds/${feed}`,
+                        JSON.stringify(data)
+                    );
+                }
+
             } else {
                 sendDataToFirebase(feed, last_value);//inisialisasi
             }
@@ -114,15 +125,26 @@ getFeeds((feeds = []) => {
     })
 
     mqttClient.on("message", (topic, message) => {
-        console.log("INI ADA DATA NIHHH", topic, message)
+        topic = topic.split(`${adafruitUsername}/feeds/`).join('')
         const data = JSON.parse(message.toString());
-        sendDataToFirebase(topic.split(`${adafruitUsername}/feeds/`).join(''), data);
+        if (data != existFeeds.find(({ name }) => name == topic)?.last_value) {
+            let idx = existFeeds.findIndex(({ name }) => name == topic)
+            if (idx < 0) {
+                existFeeds = [...existFeeds, { name: topic, last_value: data }]
+            } else {
+                existFeeds[idx] = {
+                    name: topic,
+                    last_value: data
+                }
+            }
+            sendDataToFirebase(topic, data);
+        }
     });
 })
 
 app.get('/sync/', (req, res) => {
     getFeeds((feeds) => {
-        let { added, removed } = compareArrays(existFeeds, feeds.map(({ name }) => name))
+        let { added, removed } = compareArrays(existFeeds.map(({ name }) => name), feeds.map(({ name }) => name))
         subscribeFeeds(feeds.filter(({ name }) => added.includes(name)))
         unsubscribeFeeds(removed)
         res.json({ added, removed })
