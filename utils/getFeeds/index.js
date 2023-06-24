@@ -22,7 +22,7 @@ module.exports = (callback) => {
             if (res.statusCode == 200) {
                 feeds = JSON.parse(data)
             }
-            callback(feeds?.map(({ name, last_value }) => ({ name, last_value: parseFloat(last_value || "0") })) || []);
+            callback(feeds?.map(({ name, last_value }) => ({ name, last_value: last_value })) || []);
         });
     });
 

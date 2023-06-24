@@ -29,6 +29,7 @@ let mqttClient, existFeeds = [], listeners = {};
 
 
 const sendDataToFirebase = (feeds, data) => {
+    console.log("DEBUG", feeds, data, typeof data);
     db.ref(feeds).set(data);
     console.log("Data dikirim ke Firebase", feeds, data);
 };
