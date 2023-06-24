@@ -18,8 +18,11 @@ module.exports = (callback) => {
         });
 
         res.on("end", () => {
-            console.log("INII DATA", data)
-            const feeds = JSON.parse(data);
+            console.log("INII DATA", adafruitUsername, adafruitKey)
+            let feeds = [];
+            if (res.statusCode == 200) {
+                feeds = JSON.parse(data)
+            }
             callback(feeds?.map(({ name, last_value }) => ({ name, last_value: parseFloat(last_value || "0") })) || []);
         });
     });
